@@ -1,0 +1,50 @@
+
+#ifndef BPFTRACE_HAVE_BTF
+#include <net/tcp_states.h>
+#include <net/sock.h>
+#include <linux/socket.h>
+#include <linux/tcp.h>
+#else
+#include <sys/socket.h>
+#endif
+
+BEGIN 
+{
+    printf("Tracing tcp connect fails. Hit Ctrl-C to end.\n");
+    printf("%-8s %-8s %-16s ", "TIME", "PID", "COMM");
+    printf("%-21s %-6s %-21s %-6s %-8s\n", "SADDR", "SPORT", "DADDR", "DPORT", "STATE");
+}
+
+// tracepoint:sock:inet_sock_set_state
+kprobe:tcp_set_state
+{
+	$sk = (struct sock *)arg0;
+	$newstate = arg1;
+    $inet_family = $sk->__sk_common.skc_family;
+
+    if ($inet_family == AF_INET) {
+        $daddr = ntop($sk->__sk_common.skc_daddr);
+        $saddr = ntop($sk->__sk_common.skc_rcv_saddr);
+    } else if ($inet_family == AF_INET6) {
+        $daddr = ntop($sk->__sk_common.skc_v6_daddr.in6_u.u6_addr8);
+        $saddr = ntop($sk->__sk_common.skc_v6_rcv_saddr.in6_u.u6_addr8);
+    } else {
+        return;
+    }
+    $lport = $sk->__sk_common.skc_num;
+    $dport = $sk->__sk_common.skc_dport;
+    $dport = bswap($dport);
+
+    // BPF_TCP_SYN_SENT -> BPF_TCP_ESTABLISHED
+    // BPF_TCP_SYN_SENT -> BPF_TCP_CLOSE
+    if ($sk->__sk_common.skc_state == 2 && $newstate == 1) {
+
+    } else if  ($sk->__sk_common.skc_state == 2 && $newstate == 7) {
+        time("%H:%M:%S ");
+        printf("%-8d %-16s ", pid, comm);
+        printf("%-21s %-6d %-21s %-6d %-8s\n", $saddr, $lport, $daddr, $dport, "failed");
+        //printf("%s\n", kstack);
+    }
+}
+
+
