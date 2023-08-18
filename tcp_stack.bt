@@ -37,11 +37,11 @@ kprobe:__netif_receive_skb
     $sport = bswap($tcphdr->source);
     $dport = bswap($tcphdr->dest);
 
-    //if ($sport == 80 || $dport == 80) {
+    if ($sport == 80 || $dport == 80) {
         time("%H:%M:%S  ");
         printf("[%d] __netif_receive_skb: %s:%d -> %s:%d\n", $ifindex, $sip, $sport, $dip, $dport);
-   //     printf("%s\n",  kstack());
-    //}
+        //printf("%s\n",  kstack());
+    }
 }
 
 
