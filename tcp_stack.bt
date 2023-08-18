@@ -101,6 +101,108 @@ tracepoint:net:netif_receive_skb
     }
 }
 
+kprobe:ip_route_use_hint
+{
+    $skb = (struct sk_buff*)arg0;
+
+    if (bswap($skb->protocol) != ETH_P_IP) { return; } // IPv4
+
+    // 网卡
+    $dev = (struct net_device *)$skb->dev;
+    $ifindex = $dev->ifindex;
+
+    if ($ifindex == 1) { return; } // interface: lo
+
+    // IP Header
+    $iph = (struct iphdr *)($skb->head + $skb->network_header);
+    $sip = ntop(AF_INET, $iph->saddr);
+    $dip = ntop(AF_INET, $iph->daddr);
+
+    if ($iph->protocol != IPPROTO_TCP) { return ; } // TCP
+
+    // TCP HEADER 
+    $tcphdr = (struct tcphdr *)($skb->head + $skb->transport_header);
+    $sport = bswap($tcphdr->source);
+    $dport = bswap($tcphdr->dest);
+
+    if ($sport == 80 || $dport == 80) {
+        time("%H:%M:%S  ");
+        printf("[%d] ip_route_use_hint: %s:%d -> %s:%d\n", $ifindex, $sip, $sport, $dip, $dport);
+        //printf("%s\n",  kstack());
+    }
+}
+
+kprobe:ip_route_input_noref
+{
+    $skb = (struct sk_buff*)arg0;
+
+    if (bswap($skb->protocol) != ETH_P_IP) { return; } // IPv4
+
+    // 网卡
+    $dev = (struct net_device *)$skb->dev;
+    $ifindex = $dev->ifindex;
+
+    if ($ifindex == 1) { return; } // interface: lo
+
+    // IP Header
+    $iph = (struct iphdr *)($skb->head + $skb->network_header);
+    $sip = ntop(AF_INET, $iph->saddr);
+    $dip = ntop(AF_INET, $iph->daddr);
+
+    if ($iph->protocol != IPPROTO_TCP) { return ; } // TCP
+
+    // TCP HEADER 
+    $tcphdr = (struct tcphdr *)($skb->head + $skb->transport_header);
+    $sport = bswap($tcphdr->source);
+    $dport = bswap($tcphdr->dest);
+
+    if ($sport == 80 || $dport == 80) {
+        time("%H:%M:%S  ");
+        printf("[%d] ip_route_input_noref: %s:%d -> %s:%d\n", $ifindex, $sip, $sport, $dip, $dport);
+        //printf("%s\n",  kstack());
+    }
+}
+
+kretprobe:ip_route_input_noref
+{
+    printf("ip_route_input_noref return %d\n", retval);
+}
+
+tracepoint:skb:kfree_skb
+{
+    $reason = args->reason;
+    $skb = (struct sk_buff *)args->skbaddr;
+
+    if (bswap($skb->protocol) != ETH_P_IP) { return; } // IPv4
+
+    // 网卡
+    $dev = (struct net_device *)$skb->dev;
+    $ifindex = $dev->ifindex;
+
+    if ($ifindex == 1) { return; } // interface: lo
+
+    // IP Header
+    $iph = (struct iphdr *)($skb->head + $skb->network_header);
+    $sip = ntop(AF_INET, $iph->saddr);
+    $dip = ntop(AF_INET, $iph->daddr);
+
+    if ($iph->protocol != IPPROTO_TCP) { return ; } // TCP
+
+    // TCP HEADER 
+    $tcphdr = (struct tcphdr *)($skb->head + $skb->transport_header);
+    $sport = bswap($tcphdr->source);
+    $dport = bswap($tcphdr->dest);
+
+    if ($sport == 80 || $dport == 80) {
+        time("%H:%M:%S ");
+        printf("[%d] reason: %d kfree_skb: %s:%d -> %s:%d\n", $ifindex, $reason, $sip, $sport, $dip, $dport);
+
+        printf("iph->ihl: %d, pkt_type: %d\n", $iph->ihl, $skb->pkt_type);
+        printf("%s\n",  kstack());
+    }
+}
+
+
 END 
 {
     printf("Bye!\n");
