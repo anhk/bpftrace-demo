@@ -21,16 +21,14 @@ kprobe:__netif_receive_skb
     $dev = (struct net_device *)$skb->dev;
     $ifindex = $dev->ifindex;
 
-    if ($ifindex == 1) { // interface: lo
-        return;
-    }
+    if ($ifindex == 1) { return; } // interface: lo
 
     // IP Header
     $iph = (struct iphdr *)($skb->head + $skb->network_header);
     $sip = ntop(AF_INET, $iph->saddr);
     $dip = ntop(AF_INET, $iph->daddr);
 
-    if ($iph->protocol != IPPROTO_TCP) { return ; }
+    if ($iph->protocol != IPPROTO_TCP) { return ; } // TCP
 
     // TCP HEADER 
     $tcphdr = (struct tcphdr *)($skb->head + $skb->transport_header);
