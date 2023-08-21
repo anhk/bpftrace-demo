@@ -165,7 +165,41 @@ kprobe:ip_route_input_noref
 
 kretprobe:ip_route_input_noref
 {
-    printf("ip_route_input_noref return %d\n", retval);
+    if (retval != 0){
+        printf("ip_route_input_noref return %d\n", retval);
+    }
+}
+
+
+kprobe:ip_forward
+{
+    $skb = (struct sk_buff*)arg0;
+
+    if (bswap($skb->protocol) != ETH_P_IP) { return; } // IPv4
+
+    // 网卡
+    $dev = (struct net_device *)$skb->dev;
+    $ifindex = $dev->ifindex;
+
+    if ($ifindex == 1) { return; } // interface: lo
+
+    // IP Header
+    $iph = (struct iphdr *)($skb->head + $skb->network_header);
+    $sip = ntop(AF_INET, $iph->saddr);
+    $dip = ntop(AF_INET, $iph->daddr);
+
+    if ($iph->protocol != IPPROTO_TCP) { return ; } // TCP
+
+    // TCP HEADER 
+    $tcphdr = (struct tcphdr *)($skb->head + $skb->transport_header);
+    $sport = bswap($tcphdr->source);
+    $dport = bswap($tcphdr->dest);
+
+    if ($sport == 80 || $dport == 80) {
+        time("%H:%M:%S  ");
+        printf("[%d] ip_forward: %s:%d -> %s:%d\n", $ifindex, $sip, $sport, $dip, $dport);
+        //printf("%s\n",  kstack());
+    }
 }
 
 tracepoint:skb:kfree_skb
@@ -202,6 +236,53 @@ tracepoint:skb:kfree_skb
     }
 }
 
+kretprobe:ip_route_input_slow
+{   
+    if (retval != 0){
+        printf("ip_route_input_slow return %d\n", retval);
+    }
+}
+
+kprobe:ip_route_input_slow
+{
+    $skb = (struct sk_buff*)arg0;
+
+    if (bswap($skb->protocol) != ETH_P_IP) { return; } // IPv4
+
+    // 网卡
+    $dev = (struct net_device *)$skb->dev;
+    $ifindex = $dev->ifindex;
+
+    if ($ifindex == 1) { return; } // interface: lo
+
+    // IP Header
+    $iph = (struct iphdr *)($skb->head + $skb->network_header);
+    $sip = ntop(AF_INET, $iph->saddr);
+    $dip = ntop(AF_INET, $iph->daddr);
+
+    if ($iph->protocol != IPPROTO_TCP) { return ; } // TCP
+
+    // TCP HEADER 
+    $tcphdr = (struct tcphdr *)($skb->head + $skb->transport_header);
+    $sport = bswap($tcphdr->source);
+    $dport = bswap($tcphdr->dest);
+
+    if ($sport == 80 || $dport == 80) {
+        time("%H:%M:%S ");
+        printf("[%d] ip_route_input_slow: %s:%d -> %s:%d\n", $ifindex, $sip, $sport, $dip, $dport);
+
+        $in_dev = (struct net_device*)arg4;
+        if ($in_dev == 0){
+            printf("indev = NULL\n");
+        }
+
+        $daddr =  ntop(AF_INET, (uint32)arg1);
+        $saddr = ntop(AF_INET,  (uint32)arg2);
+
+
+        printf("ip_route_input_slow: %s->%s\n", $saddr, $daddr);
+    }
+}
 
 END 
 {
