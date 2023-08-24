@@ -1,0 +1,30 @@
+#!/usr/bin/env bpftrace
+
+kprobe:map_create {
+    $attr = (union bpf_attr *)arg0;
+    printf("========================= map_create enter\n"); 
+    printf("map_type: %d\n", $attr->map_type);
+    printf("map_flags: %d\n", $attr->map_flags);
+    printf("map_extra: %d\n", $attr->map_extra);
+    printf("btf_key_type_id: %d\n", $attr->btf_key_type_id);
+    printf("btf_value_type_id: %d\n", $attr->btf_value_type_id);
+    printf("btf_vmlinux_value_type_id: %d\n", $attr->btf_vmlinux_value_type_id);
+}
+
+kprobe:bpf_obj_name_cpy {
+    $src = arg1;
+    printf("copy `%s`\n", str( $src));
+}
+
+kprobe:map_check_btf {
+    printf("map_check_btf enter\n");
+}
+
+kretprobe:htab_map_alloc_check { printf("htab_map_alloc_check return: %d\n", retval); }
+kprobe:htab_map_alloc_check { printf("htab_map_alloc_check enter\n");}
+
+kretprobe:bpf_lsm_bpf_map_alloc_security { printf("bpf_lsm_bpf_map_alloc_security return: %d\n", retval);}
+kretprobe:map_create { printf("map_create return: %d\n", retval); }
+kretprobe:bpf_obj_name_cpy { printf("bpf_obj_name_cpy return: %d\n", retval); }
+kretprobe:bpf_get_file_flag { printf("bpf_get_file_flag return: %d\n", retval); }
+kretprobe:map_check_btf { printf("map_check_btf return: %d\n", retval);}
