@@ -60,17 +60,24 @@ tracepoint:skb:kfree_skb
     $sip = ntop(AF_INET, $iph->saddr);
     $dip = ntop(AF_INET, $iph->daddr);
 
+    if ($iph->protocol == IPPROTO_IPIP) {
+        time("%H:%M:%S ");
+        printf("[%d] reason: %d kfree_skb: %s -> %s\n", $ifindex, $reason, $sip, $dip);
+        printf("%s\n",  kstack());
+        return;
+    }
+
     if ($iph->protocol == IPPROTO_TCP) { // TCP
         // TCP HEADER 
         $tcphdr = (struct tcphdr *)($skb->head + $skb->transport_header);
         $sport = bswap($tcphdr->source);
         $dport = bswap($tcphdr->dest);
 
-        if ($sport == 80 || $dport == 80) {
+        //if ($sport == 80 || $dport == 80) {
             time("%H:%M:%S ");
             printf("[%d] reason: %d kfree_skb: %s:%d -> %s:%d\n", $ifindex, $reason, $sip, $sport, $dip, $dport);
             printf("%s\n",  kstack());
-        }
+        //}
     } else if ($iph->protocol == IPPROTO_UDP) { // UDP
         $udphdr = (struct udphdr *)($skb->head + $skb->transport_header);
         $sport = bswap($udphdr->source);
