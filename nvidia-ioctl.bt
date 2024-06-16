@@ -1,0 +1,71 @@
+#!/usr/bin/env bpftrace
+BEGIN
+{
+	printf("Tracing ioctl syscalls for NVIDIA driver... Hit Ctrl-C to end.\n");
+	printf("%-6s %-16s %4s %s %s\n", "PID", "COMM", "FD", "CMD", "PATH");
+
+    @monitor["/dev/nvidiactl"] = true;
+    @monitor["/dev/nvidia-uvm"] = true;
+    @monitor["/dev/nvidia-uvm-tools"] = true;
+    @monitor["/dev/nvidia0"] = true;
+    @monitor["/dev/nvidia1"] = true;
+    @monitor["/dev/nvidia2"] = true;
+    @monitor["/dev/nvidia3"] = true;
+    @monitor["/dev/nvidia4"] = true;
+    @monitor["/dev/nvidia5"] = true;
+    @monitor["/dev/nvidia6"] = true;
+    @monitor["/dev/nvidia7"] = true;
+}
+
+tracepoint:syscalls:sys_enter_open,
+tracepoint:syscalls:sys_enter_openat
+{
+	@filename[tid] = str(args->filename);
+}
+
+tracepoint:syscalls:sys_exit_open,
+tracepoint:syscalls:sys_exit_openat
+//@filename[tid]
+//@fd2filename[fd]
+{
+}
+
+tracepoint:syscalls:sys_enter_open,
+tracepoint:syscalls:sys_enter_openat
+{
+	@filename[tid] = str(args->filename);
+}
+
+tracepoint:syscalls:sys_exit_open,
+tracepoint:syscalls:sys_exit_openat
+//@filename[tid]
+//@fd2filename[fd]
+{
+    $ret = args->ret > 0? args->ret: -1;
+	@fd2filename[tid, $ret] = @filename[tid];
+}
+
+tracepoint:syscalls:sys_enter_ioctl
+{
+	@fds[tid] = args->fd;
+	@cmd[tid] = args->cmd;
+}
+
+tracepoint:syscalls:sys_exit_ioctl
+//@fds[tid]
+//@cmd[tid]
+{
+	$fd = @fds[tid];
+    $filename = @fd2filename[tid, $fd];
+    if (@monitor[$filename]) {
+	    printf("%-6d %-16s %4d 0x%x %s\n", pid, comm, $fd, @cmd[tid], @fd2filename[tid, $fd]);
+    }
+}
+
+END
+{
+	clear(@filename);
+	clear(@fd2filename);
+	clear(@fds);
+	clear(@cmd);
+}
