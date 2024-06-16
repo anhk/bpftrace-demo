@@ -1,4 +1,12 @@
 #!/usr/bin/env bpftrace
+
+/**
+ * 参考: 
+ * - https://gist.github.com/jim3ma/071108d90b7bb9b4067d64889d826415#file-ioctlsnoop-bt
+ * - https://github.com/bpftrace/bpftrace/blob/master/man/adoc/bpftrace.adoc
+ * - https://www.cnblogs.com/pengdonglin137/articles/16876579.html
+ */
+
 BEGIN
 {
 	printf("Tracing ioctl syscalls for NVIDIA driver... Hit Ctrl-C to end.\n");
