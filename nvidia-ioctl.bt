@@ -68,4 +68,5 @@ END
 	clear(@fd2filename);
 	clear(@fds);
 	clear(@cmd);
+    clear(@monitor);
 }
