@@ -9,8 +9,8 @@
 
 BEGIN
 {
-	printf("Tracing ioctl syscalls for NVIDIA driver... Hit Ctrl-C to end.\n");
-	printf("%-6s %-16s %4s %s %s\n", "PID", "COMM", "FD", "CMD", "PATH");
+    printf("Tracing ioctl syscalls for NVIDIA driver... Hit Ctrl-C to end.\n");
+    printf("%-6s %-16s %4s %s %s\n", "PID", "COMM", "FD", "CMD", "PATH");
 
     @monitor["/dev/nvidiactl"] = true;
     @monitor["/dev/nvidia-uvm"] = true;
@@ -29,7 +29,7 @@ BEGIN
 tracepoint:syscalls:sys_enter_open,
 tracepoint:syscalls:sys_enter_openat
 {
-	@filename[tid] = str(args->filename);
+    @filename[tid] = str(args->filename);
 }
 
 tracepoint:syscalls:sys_exit_open,
@@ -38,31 +38,32 @@ tracepoint:syscalls:sys_exit_openat
 //@fd2filename[fd]
 {
     $ret = args->ret > 0? args->ret: -1;
-	@fd2filename[tid, $ret] = @filename[tid];
+    @fd2filename[tid, $ret] = @filename[tid];
 }
 
 tracepoint:syscalls:sys_enter_ioctl
 {
-	@fds[tid] = args->fd;
-	@cmd[tid] = args->cmd;
+    @fds[tid] = args->fd;
+    @cmd[tid] = args->cmd;
 }
 
 tracepoint:syscalls:sys_exit_ioctl
 //@fds[tid]
 //@cmd[tid]
 {
-	$fd = @fds[tid];
+    $fd = @fds[tid];
     $filename = @fd2filename[tid, $fd];
     if (@monitor[$filename]) {
-	    printf("%-6d %-16s %4d 0x%x %s\n", pid, comm, $fd, @cmd[tid], @fd2filename[tid, $fd]);
+        printf("%-6d %-16s %4d 0x%x %s\n", pid, comm, $fd, @cmd[tid], @fd2filename[tid, $fd]);
     }
 }
 
 END
 {
-	clear(@filename);
-	clear(@fd2filename);
-	clear(@fds);
-	clear(@cmd);
+    clear(@filename);
+    clear(@fd2filename);
+    clear(@fds);
+    clear(@cmd);
     clear(@monitor);
 }
+
