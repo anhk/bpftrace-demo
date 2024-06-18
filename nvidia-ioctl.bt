@@ -41,6 +41,8 @@ tracepoint:syscalls:sys_exit_openat
     @fd2filename[tid, $ret] = @filename[tid];
 }
 
+
+// cat /sys/kernel/debug/tracing/events/syscalls/sys_enter_ioctl/format
 tracepoint:syscalls:sys_enter_ioctl
 {
     @fds[tid] = args->fd;
